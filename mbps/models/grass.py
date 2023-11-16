@@ -132,9 +132,9 @@ class Grass(Module):
 
         # -- Disturbances at instant _t
         I0, T, WAI = self.d['I0'], self.d['T'], self.d['WAI']
-        _I0 = np.interp(_t, I0[:,0], I0[:,1])  # [J m-2 d-2] PAR
-        _T = np.interp(_t, T[:,0], T[:,1])  # [°C] Environment temperature
-        _WAI = np.interp(_t, WAI[:,0], WAI[:,1])  # [-] Water availability index
+        _I0 = np.interp(_t, I0[:, 0], I0[:, 1])  # [J m-2 d-2] PAR
+        _T = np.interp(_t, T[:, 0], T[:, 1])  # [°C] Environment temperature
+        _WAI = np.interp(_t, WAI[:, 0], WAI[:, 1])  # [-] Water availability index
 
         # -- Controlled inputs
         f_Gr = self.u['f_Gr']  # [kgC m-2 d-1] Graze
@@ -154,22 +154,11 @@ class Grass(Module):
         # - Photosynthesis
         LAI = a * Wg
         Pm = P0 * TI
-        c1 = alpha * k * _I0/ (1 - m)
+        c1 = alpha * k * _I0 / (1 - m)
         P = Pm / k * np.log((c1 + Pm) / (c1 * np.exp(-k * LAI) + Pm))
         # - Flows
         # Photosynthesis [kgC m-2 d-1]
         f_P = _WAI * theta * phi * P
-        # print("------------------")
-        # print("f_P", f_P)
-        # # print("_WAI", _WAI)
-        # # print("theta", theta)
-        # # print("phi", phi)
-        # print("P", P)
-        # print("Pm", Pm)
-        # print("k", k)
-        # print("c1", c1)
-        # print("LAI", LAI)
-        # print("------------------")
         # # Growth [kgC m-2 d-1]
         f_G = mu_m * Ws * Wg / (W)
         # Shoot respiration [kgC m-2 d-1]
@@ -178,24 +167,14 @@ class Grass(Module):
         f_MR = M * Wg
         # Senescence [kgC m-2 d-1]
         f_S = beta * Wg
-        gamma=0
+        gamma = 0
         # Recycling
-        f_R = gamma*Wg
-        print('f_P',f_P)
-        # print('f_MR',f_MR)
-        # print('f_SR',f_SR)
-        print('mu_m',mu_m)
-        print('Ws',Ws)
-        print('Wg',Wg)
-        print('W',W)
-        print('f_G',f_G)
-        print('f_R',f_R)
-        print('f_S',f_S)
+        f_R = gamma * Wg
 
         # -- Differential equations [kgC m-2 d-1]
         # TODO: Write the differential equations based on the flow variables
         dWs_dt = f_P - f_SR - f_G - f_MR + f_R
-        dWg_dt = f_G - f_R- f_S
+        dWg_dt = f_G - f_R - f_S
 
         # -- Store flows [kgC m-2 d-1]
         idx = np.isin(self.t, _t)
@@ -226,7 +205,7 @@ class Grass(Module):
         t = y_int['t']
         Ws = y_int['y'][0]
         Wg = y_int['y'][1]
-        LAI=y_int['y'][1]/a
+        LAI = y_int['y'][1] / a
         return {
             't': t,  # [d] Integration time
             'Ws': Ws,  # [kgC m-2] Structure weight

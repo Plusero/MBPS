@@ -21,11 +21,11 @@ plt.style.use('ggplot')
 # TODO: define an array for a period that matches the period of measurements
 # Notice that the analytical solution is based on the running time. Therefore,
 # it's better to start the simulation from t0=0.
-t_sim = np.linspace(0.0, 365.0, 365 + 1)  # [d]
+t_sim = np.linspace(0.0, 49, 49 + 1)  # [d]
 
 # Initial condition
 # TODO: Based on the data below, propose a sensible value for the initial mass
-m0 = 0.1           # [kgDM m-2] initial mass
+m0 = 0.1  # [kgDM m-2] initial mass
 
 # Organic matter (assumed equal to DM) measured in Wageningen 1995 [gDM m-2]
 # Groot and Lantinga (2004)
@@ -33,55 +33,67 @@ t_data = np.array([107, 114, 122, 129, 136, 142, 149, 156])
 m_data = np.array([0.156, 0.198, 0.333, 0.414, 0.510, 0.640, 0.663, 0.774])
 # TODO: this file uses the analytical solution for logistic growth.
 # Adjust t_data so that it matches t_sim with t0=0.
-t_data = ???
+t_data = t_data - t_data[0]
+f = interp1d(t_data, m_data)
+m_original = f(t_sim)
 
 
 # Define a function to simulate the model output of interest (m)
 # as a function of the estimated parameter array 'p'
 def fcn_y(p):
     # Model parameters (improved iteratively)
-    r, K = p[0], p[1]   # [d-1], [kgDM m-2] model parameters
+    r, K = p[0], p[1]  # [d-1], [kgDM m-2] model parameters
     # Model output (analytical solution of logistic growth model)
     # TODO: define 'm' based on the analytical solution for logistic growth,
     # using t_sim.
-    m = ???  # [kgDM m-2]
+    m = K / (1 + (K - m_data[0]) / m_data[0] * np.exp(-r * t_sim))  # [kgDM m-2]
     return m
+
 
 # Define a function to calculate the residuals: e(k|p) = z(k)-y(k|p)
 # Notice that m_k must be interpolated for measurement instants t_data
 def fcn_residuals(p):
     # TODO: calculate m from the model output function 'fcn_y' defined above
-    m = ???
+    m = fcn_y(p)
     # TODO: create an interpolation function using Scipy interp1d,
     # based on the simulation time and mass arrays
-    f_interp = ???
+    f_interp = interp1d(t_data, m_data)
     # TODO: call the interpolation function for the measurement instants
-    m_k = f_interp(???)
+    m_k = f_interp(t_sim)
     # TODO: Calculate the residuals (err)
-    err = ???
+    err = m_k - m
     return err
-    
+
+
 # Model calibration: least_squares
 # TODO: Define an array for the initial guess of r and K (mind the order)
-p0 = np.array([???, ???])                   # Initial parameter guess
+p0 = np.array([0.1, 0.8])  # Initial parameter guess
 # TODO: Call the Scipy method least_squares
-y_lsq = least_squares(???, ???)              # Minimize sum [ e(k|p) ]^2
-
+y_lsq = least_squares(fcn_residuals, p0, '3-point')  # Minimize sum [ e(k|p) ]^2
+print(y_lsq)
 # Retrieve the calibration results (parameter estimates)
 # TODO: Once the code runs and you obtain y_lsq (a dictionary),
 # look into y_lsq and identify its elements. Uncomment the line below
 # and retrieve the parameter estimates.
-#p_hat = y_lsq[???]
+p_hat = y_lsq['x']
+print(p_hat)
 
 # Simulate the model with initial guess (p0) and estimated parameters (p_hat)
 # TODO: define variables m_hat0 (mass from initial parameter guess),
 # and m_hat (mass from estimated parameters)
-
-
+r_hat = p_hat[0]
+K_hat = p_hat[1]
+m_hat = K_hat / (1 + (K_hat - m_data[0]) / m_data[0] * np.exp(-r_hat * t_sim))
+m_ini = p0[1] / (1 + (p0[1] - m_data[0]) / m_data[0] * np.exp(-p0[0] * t_sim))
 # Plot results
 # TODO: Make a plot for the growth of m_hat0 (dashed line),
 # m_hat (continuous line), and mdata (no line, markers)
-
+plt.figure(1)
+plt.plot(t_sim, m_hat, label='m_hat')
+plt.plot(t_sim, m_original, label='m_data')
+plt.plot(t_sim, m_ini, label='ini')
+plt.legend()
+plt.show()
 # -- EXERCISE 1.2 --
 # Calibration accuracy
 
