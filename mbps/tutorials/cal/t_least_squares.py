@@ -22,10 +22,10 @@ plt.style.use('ggplot')
 # Notice that the analytical solution is based on the running time. Therefore,
 # it's better to start the simulation from t0=0.
 t_sim = np.linspace(0.0, 49, 49 + 1)  # [d]
-
+# t_sim=np.linspace(107,156,156-107+1)-107  # [d]
 # Initial condition
 # TODO: Based on the data below, propose a sensible value for the initial mass
-m0 = 0.1  # [kgDM m-2] initial mass
+m0 = 0.156  # [kgDM m-2] initial mass
 
 # Organic matter (assumed equal to DM) measured in Wageningen 1995 [gDM m-2]
 # Groot and Lantinga (2004)
@@ -46,7 +46,7 @@ def fcn_y(p):
     # Model output (analytical solution of logistic growth model)
     # TODO: define 'm' based on the analytical solution for logistic growth,
     # using t_sim.
-    m = K / (1 + (K - m_data[0]) / m_data[0] * np.exp(-r * t_sim))  # [kgDM m-2]
+    m = K / (1 + (K - m0) / m0 * np.exp(-r * t_sim))  # [kgDM m-2]
     return m
 
 
@@ -58,10 +58,11 @@ def fcn_residuals(p):
     # TODO: create an interpolation function using Scipy interp1d,
     # based on the simulation time and mass arrays
     f_interp = interp1d(t_data, m_data)
+    # f_interp =interp1d(t_sim,m)
     # TODO: call the interpolation function for the measurement instants
     m_k = f_interp(t_sim)
     # TODO: Calculate the residuals (err)
-    err = m_k - m
+    err = m - m_k
     return err
 
 
@@ -90,7 +91,7 @@ m_ini = p0[1] / (1 + (p0[1] - m_data[0]) / m_data[0] * np.exp(-p0[0] * t_sim))
 # m_hat (continuous line), and mdata (no line, markers)
 plt.figure(1)
 plt.plot(t_sim, m_hat, label='m_hat')
-plt.plot(t_sim, m_original, label='m_data')
+plt.plot(t_data, m_data, label='m_data', marker="o")
 plt.plot(t_sim, m_ini, label='ini')
 plt.legend()
 plt.show()
@@ -99,23 +100,31 @@ plt.show()
 
 # Jacobian matrix
 # TODO: Retrieve the sensitivity matrix (Jacobian) J from y_ls.
-
+J = y_lsq['jac']
 # Residuals
 # TODO: Retrieve the residuals from y_ls
-
+res = y_lsq['fun']
 # Variance of residuals
 # TODO: Calculate the variance of residuals
-
+N_ins = len(t_sim)  # total number of measurements at instants
+n_p = len(p0)  # the number of model parameters.
+var_errr = 1 / (N_ins - n_p) * (res.T @ res)
 # Covariance matric of parameter estimates
 # TODO: Calculate the covariance matrix
-
+cov_matrix = (res.T @ res) / (N_ins - n_p) * (np.transpose(J) @ J) ** -1
 # Standard deviations of parameter estimates
+print("cov_matrix", cov_matrix)
 # TODO: Calculate the variance and standard error
-
+variance = cov_matrix.diagonal
+# variance_i = np.fliplr(cov_matrix).diagonal()
+# s_i = np.sqrt(variance_i)
+s = np.sqrt(cov_matrix.diagonal())
 # Correlation coefficients of parameter estimates
 # TODO: Calculate the correlation coefficients
-# (you can use a nested for-loop, i.e., a for-loops inside another)
-
+# (you can use a nested for-loop, i.e., a for-loops inside another) why tho??
+# for i in
+cc = cov_matrix[0][1] ** 2 / (s[0] * s[1])
+print("cc", cc)
 
 # References
 

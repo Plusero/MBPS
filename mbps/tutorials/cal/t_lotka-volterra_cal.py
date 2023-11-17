@@ -21,18 +21,20 @@ tsim = np.arange(0, 365, 1)
 tspan = (tsim[0], tsim[-1])
 
 # Initialize reference object
-dt = 1.0                    # [d] time-step size
-x0 = {'prey':50, 'pred':50} # populations [preys, preds]
+dt = 1.0  # [d] time-step size
+x0 = {'prey': 50, 'pred': 50}  # populations [preys, preds]
 # Model parameters
 # p1 [d-1], p2 [pred-1 d-1], p3 [prey-1 d-1], p4 [d-1]
-p = {'p3':0.01/30, 'p4':1.0/30}
+p = {'p3': 0.01 / 30, 'p4': 1.0 / 30}
 # Initialize object
 lv = LotkaVolterra(tsim, dt, x0, p)
 
 # Data
 t_data = np.array([60, 120, 180, 240, 300, 360])
 y_data = np.array([[96, 191, 61, 83, 212, 41],  # [preys]
-                   [18, 50, 64, 35, 40, 91]]).T # [preds]
+                   [18, 50, 64, 35, 40, 91]]).T  # [preds]
+print("shape y_data", y_data.shape)
+
 
 # Define function to simulate model based on estimated array 'p0'.
 # -- Exercise 3.1. Estimate p1 and p2
@@ -50,15 +52,19 @@ def fcn_y(p0):
     # it is best to compute the residuals based on numpy arrays.
     # We use rows for time, and columns for model outputs.
     # TODO: retrieve the model outputs into a numpy array for populations 'pop'
-    pop = ???
+    # pop = y['prey', 'pred']
+    # pop = y['x']
+    pop = np.stack((y['prey'], y['pred']), axis=-1)
+    print("pop.shape", pop.shape)
     return pop
+
 
 # Run calibration function
 # -- Exercise 3.1. Estimate p1 and p2
 # -- Exercise 3.2. estimate p1 and p3
-p0 = np.array([0.01/30, 0.01/30]) # Initial guess
+p0 = np.array([1 / 30, 0.02 / 30])  # Initial guess
 y_ls = least_squares(fcn_residuals, p0,
-                     bounds = ([1E-6, 1E-6], [np.inf, np.inf]),
+                     bounds=([1E-6, 1E-6], [np.inf, np.inf]),
                      args=(fcn_y, lv.t, t_data, y_data),
                      )
 
@@ -73,4 +79,11 @@ y_hat = fcn_y(p_hat_arr)
 # -- Exercise 3.1 and 3.2
 # TODO: plot the model output based on the estimated parameters,
 # together with the data.
+
 plt.figure('Calibrated model and data')
+plt.plot(tsim, y_hat[:, 0], label='prey')
+plt.plot(tsim, y_hat[:, 1], label='pred')
+plt.plot(t_data, y_data[:, 0], 'o', label='data prey')
+plt.plot(t_data, y_data[:, 1], 'x', label='data pred')
+plt.legend()
+plt.show()
