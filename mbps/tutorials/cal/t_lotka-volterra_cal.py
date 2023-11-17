@@ -25,7 +25,8 @@ dt = 1.0  # [d] time-step size
 x0 = {'prey': 50, 'pred': 50}  # populations [preys, preds]
 # Model parameters
 # p1 [d-1], p2 [pred-1 d-1], p3 [prey-1 d-1], p4 [d-1]
-p = {'p3': 0.01 / 30, 'p4': 1.0 / 30}
+# p = {'p3': 0.01 / 30, 'p4': 1.0 / 30}
+p = {'p2': 0.02 / 30, 'p4': 1.0 / 30}
 # Initialize object
 lv = LotkaVolterra(tsim, dt, x0, p)
 
@@ -44,7 +45,7 @@ def fcn_y(p0):
     lv.x0 = x0.copy()
     # Reassign parameters from array p0 to object
     lv.p['p1'] = p0[0]
-    lv.p['p2'] = p0[1]
+    lv.p['p3'] = p0[1]
     # Simulate the model
     y = lv.run(tspan)
     # Retrieve result (model output of interest)
@@ -62,7 +63,7 @@ def fcn_y(p0):
 # Run calibration function
 # -- Exercise 3.1. Estimate p1 and p2
 # -- Exercise 3.2. estimate p1 and p3
-p0 = np.array([1 / 30, 0.02 / 30])  # Initial guess
+p0 = np.array([1 / 30, 0.01 / 30])  # Initial guess
 y_ls = least_squares(fcn_residuals, p0,
                      bounds=([1E-6, 1E-6], [np.inf, np.inf]),
                      args=(fcn_y, lv.t, t_data, y_data),
@@ -87,3 +88,30 @@ plt.plot(t_data, y_data[:, 0], 'o', label='data prey')
 plt.plot(t_data, y_data[:, 1], 'x', label='data pred')
 plt.legend()
 plt.show()
+
+J = y_ls['jac']
+# Residuals
+# TODO: Retrieve the residuals from y_ls
+res = y_ls['fun']
+# Variance of residuals
+# TODO: Calculate the variance of residuals
+N_ins = len(tsim)  # total number of measurements at instants
+n_p = len(p0)  # the number of model parameters.
+var_errr = 1 / (N_ins - n_p) * (res.T @ res)
+# Covariance matric of parameter estimates
+# TODO: Calculate the covariance matrix
+cov_matrix = (res.T @ res) / (N_ins - n_p) * (np.transpose(J) @ J) ** -1
+# Standard deviations of parameter estimates
+# TODO: Calculate the variance and standard error
+variance = cov_matrix.diagonal
+# variance_i = np.fliplr(cov_matrix).diagonal()
+# s_i = np.sqrt(variance_i)
+s = np.sqrt(cov_matrix.diagonal())
+# Correlation coefficients of parameter estimates
+# TODO: Calculate the correlation coefficients
+# (you can use a nested for-loop, i.e., a for-loops inside another) why tho??
+# for i in
+cc = cov_matrix[0][1] ** 2 / (s[0] * s[1])
+print("cov_matrix", cov_matrix)
+print("s", s)
+print("cc", cc)
