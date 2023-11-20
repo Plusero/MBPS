@@ -29,7 +29,6 @@ class Module():
         # Logs of simulation results
         self.y = {}
 
-
     def run(self, tspan, d=None, u=None):
         """ Run the attribute 'model' of Module instance
         
