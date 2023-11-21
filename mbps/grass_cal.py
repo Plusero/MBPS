@@ -22,8 +22,8 @@ plt.style.use('ggplot')
 tsim = np.linspace(0, 365, 365 + 1)  # [d]
 
 # Weather data (disturbances)
-t_ini = '20180101'
-t_end = '20190101'
+t_ini = '20170101'
+t_end = '20180101'
 t_weather = np.linspace(0, 365, 365 + 1)
 data_weather = pd.read_csv(
     '../data/etmgeg_260.csv',  # .. to move up one directory from current directory
@@ -148,6 +148,6 @@ WgDM_hat = fnc_y(p_hat)
 # the measured data
 plt.figure(1)
 plt.plot(tsim, WgDM_hat, label='m_hat')
-# plt.plot(tdata, mdata, label='m_data', marker="o")
+plt.plot(t_data, m_data, label='m_data', marker="o")
 plt.legend()
 plt.show()
