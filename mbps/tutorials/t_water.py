@@ -32,7 +32,7 @@ gamma = 0.68  # [mbar °C-1] Psychrometric constant
 Irr_gl = 18.0  # [MJ m-2 d-2] Global irradiance
 alb = 0.23  # [-] albedo (crop)
 # Rn = 0.408 * Irr_gl * 1 - (alb)  # [MJ m-2 d-1] Net radiation
-Rn = 1e6
+
 # Model equations
 # TODO: Define variables for the model
 # Exercise 1. Pvs, Delta 
