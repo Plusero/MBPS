@@ -18,124 +18,126 @@ from mbps.models.water_sol import Water
 plt.style.use('ggplot')
 
 # Simulation time
-tsim = np.linspace(0, 365, int(365/5)+1) # [d]
+tsim = np.linspace(0, 365, int(365 / 5) + 1)  # [d]
 
 # Weather data (disturbances shared across models)
 t_ini = '19950101'
 t_end = '19960101'
-t_weather = np.linspace(0, 365, 365+1)
+# t_ini = '20180101'
+# t_end = '20190101'
+t_weather = np.linspace(0, 365, 365 + 1)
 data_weather = pd.read_csv(
-    '../data/etmgeg_260.csv', # .. to move up one directory from current directory
-    skipinitialspace=True, # ignore spaces after comma separator
-    header = 47-3, # row with column names, 0-indexed, excluding spaces
-    usecols = ['YYYYMMDD', 'TG', 'Q', 'RH'], # columns to use
-    index_col = 0, # column with row names from used columns, 0-indexed
-    )
+    '../data/etmgeg_260.csv',  # .. to move up one directory from current directory
+    skipinitialspace=True,  # ignore spaces after comma separator
+    header=47 - 3,  # row with column names, 0-indexed, excluding spaces
+    usecols=['YYYYMMDD', 'TG', 'Q', 'RH'],  # columns to use
+    index_col=0,  # column with row names from used columns, 0-indexed
+)
 
 # Grass data. (Organic matter assumed equal to DM) [gDM m-2]
 # Groot and Lantinga (2004)
 t_data = np.array([107, 114, 122, 129, 136, 142, 149, 156])
 m_data = np.array([156., 198., 333., 414., 510., 640., 663., 774.])
-m_data = m_data/1E3
+m_data = m_data / 1E3
 
 # ---- Grass sub-model
 # Step size
-dt_grs = 1 # [d]
+dt_grs = 1  # [d]x
 
 # Initial conditions
 # TODO: Specify suitable initial conditions for the grass sub-model
-x0_grs = {'Ws':???,'Wg':???} # [kgC m-2]
-
+x0_grs = {'Ws': 0, 'Wg': 0.02}  # [kgC m-2] according to the Mohtar et al. 1997
+# note that the Unit here is KgC m-2, meaning the weight of carbon content
 # Model parameters (as provided by Mohtar et al. 1997 p.1492-1493)
-p_grs = {'a':40.0,          # [m2 kgC-1] structural specific leaf area
-     'alpha':2E-9,      # [kgCO2 J-1] leaf photosynthetic efficiency
-     'beta':0.05,       # [d-1] senescence rate 
-     'k':0.5,           # [-] extinction coefficient of canopy
-     'm':0.1,           # [-] leaf transmission coefficient
-     'M':0.02,          # [d-1] maintenance respiration coefficient
-     'mu_m':0.5,        # [d-1] max. structural specific growth rate
-     'P0':0.432,        # [kgCO2 m-2 d-1] max photosynthesis parameter
-     'phi':0.9,         # [-] photoshynth. fraction for growth
-     'Tmin':0.0,        # [°C] maximum temperature for growth
-     'Topt':20.0,       # [°C] minimum temperature for growth
-     'Tmax':42.0,       # [°C] optimum temperature for growth
-     'Y':0.75,          # [-] structure fraction from storage
-     'z':1.33           # [-] bell function power
-     }
+p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area
+         'alpha': 2E-9,  # [kgCO2 J-1] leaf photosynthetic efficiency
+         'beta': 0.05,  # [d-1] senescence rate
+         'k': 0.5,  # [-] extinction coefficient of canopy
+         'm': 0.1,  # [-] leaf transmission coefficient
+         'M': 0.02,  # [d-1] maintenance respiration coefficient
+         'mu_m': 0.5,  # [d-1] max. structural specific growth rate
+         'P0': 0.432,  # [kgCO2 m-2 d-1] max photosynthesis parameter
+         'phi': 0.9,  # [-] photoshynth. fraction for growth
+         'Tmin': 0.0,  # [°C] maximum temperature for growth
+         'Topt': 20.0,  # [°C] minimum temperature for growth
+         'Tmax': 42.0,  # [°C] optimum temperature for growth
+         'Y': 0.75,  # [-] structure fraction from storage
+         'z': 1.33  # [-] bell function power
+         }
 # Model parameters adjusted manually to obtain growth
 # TODO: Adjust a few parameters to obtain growth.
-# Satrt by using the modifications from Case 1.
+# Start by using the modifications from Case 1.
 # If needed, adjust further those or additional parameters
-p_grs[???] = ???
-p_grs[???] = ???
+p_grs['alpha'] = 2E-9 * 10
 
 # Disturbances
 # PAR [J m-2 d-1], environment temperature [°C], leaf area index [-]
-T = data_weather.loc[t_ini:t_end,'TG'].values    # [0.1 °C] Env. temperature
-I_gl = data_weather.loc[t_ini:t_end,'Q'].values  # [J cm-2 d-1] Global irr.
+T = data_weather.loc[t_ini:t_end, 'TG'].values  # [0.1 °C] Env. temperature
+I_gl = data_weather.loc[t_ini:t_end, 'Q'].values  # [J cm-2 d-1] Global irr.
 
-T = T/10                   # [0.1 °C] to [°C] Environment temperature
-I0 = 0.45*I_gl*1E4/dt_grs  # [J cm-2 d-1] to [J m-2 d-1] Global irr. to PAR
+T = T / 10  # [0.1 °C] to [°C] Environment temperature
+I0 = 0.45 * I_gl * 1E4 / dt_grs  # [J cm-2 d-1] to [J m-2 d-1] Global irr. to PAR
 
-d_grs = {'T':np.array([t_weather, T]).T,
-    'I0':np.array([t_weather, I0]).T,   
-    }
+d_grs = {'T': np.array([t_weather, T]).T,
+         'I0': np.array([t_weather, I0]).T,
+         }
 
 # Initialize module
 grass = Grass(tsim, dt_grs, x0_grs, p_grs)
 
 # ---- Water sub-model
-dt_wtr = 1 # [d]
+dt_wtr = 1  # [d]
 
 # Initial conditions
 # TODO: Specify suitable initial conditions for the soil water sub-model
-x0_wtr = {'L1':???, 'L2':???, 'L3':???, 'DSD':???} # 3*[mm], [d]
+x0_wtr = {'L1': 40, 'L2': 60, 'L3': 100, 'DSD': 2}  # 3*[mm], [d]
+# using the values from the Castellaro et al. 2009
 
 # Castellaro et al. 2009, and assumed values for soil types and layers
-p_wtr = {'S':10,            # [mm d-1] parameter of precipitation retention
-     'alpha':1.29E-6,   # [mm J-1] Priestley-Taylor parameter
-     'gamma':0.68,      # [mbar °C-1] Psychrometric constant
-     'alb':0.23,        # [-] Albedo (assumed constant crop & soil)
-     'kcrop':0.90,      # [mm d-1] Evapotransp coefficient, range (0.85-1.0)
-     'WAIc':0.75,       # [-] WDI critical, range (0.5-0.8)
-     'theta_fc1':0.36,      # [-] Field capacity of soil layer 1
-     'theta_fc2':0.32,      # [-] Field capacity of soil layer 2
-     'theta_fc3':0.24,      # [-] Field capacity of soil layer 3
-     'theta_pwp1':0.21,     # [-] Permanent wilting point of soil layer 1 
-     'theta_pwp2':0.17,     # [-] Permanent wilting point of soil layer 2
-     'theta_pwp3':0.10,     # [-] Permanent wilting point of soil layer 3
-     'D1':150,        # [mm] Depth of Soil layer 1
-     'D2':250,        # [mm] Depth of soil layer 2
-     'D3':600,        # [mm] Depth of soil layer 3
-     'krf1':0.25,     # [-] Rootfraction layer 1 (guess)
-     'krf2':0.50,     # [-] Rootfraction layer 2 (guess)
-     'krf3':0.25,     # [-] Rootfraction layer 2 (guess)
-     'mlc':0.2,       # [-] Fraction of soil covered by mulching
-     }
+p_wtr = {'S': 10,  # [mm d-1] parameter of precipitation retention
+         'alpha': 1.29E-6,  # [mm J-1] Priestley-Taylor parameter
+         'gamma': 0.68,  # [mbar °C-1] Psychrometric constant
+         'alb': 0.23,  # [-] Albedo (assumed constant crop & soil)
+         'kcrop': 0.90,  # [mm d-1] Evapotransp coefficient, range (0.85-1.0)
+         'WAIc': 0.75,  # [-] WDI critical, range (0.5-0.8)
+         'theta_fc1': 0.36,  # [-] Field capacity of soil layer 1
+         'theta_fc2': 0.32,  # [-] Field capacity of soil layer 2
+         'theta_fc3': 0.24,  # [-] Field capacity of soil layer 3
+         'theta_pwp1': 0.21,  # [-] Permanent wilting point of soil layer 1
+         'theta_pwp2': 0.17,  # [-] Permanent wilting point of soil layer 2
+         'theta_pwp3': 0.10,  # [-] Permanent wilting point of soil layer 3
+         'D1': 150,  # [mm] Depth of Soil layer 1
+         'D2': 250,  # [mm] Depth of soil layer 2
+         'D3': 600,  # [mm] Depth of soil layer 3
+         'krf1': 0.25,  # [-] Rootfraction layer 1 (guess)
+         'krf2': 0.50,  # [-] Rootfraction layer 2 (guess)
+         'krf3': 0.25,  # [-] Rootfraction layer 2 (guess)
+         'mlc': 0.2,  # [-] Fraction of soil covered by mulching
+         }
 
 # Disturbances
 # global irradiance [J m-2 d-1], environment temperature [°C], 
 # precipitation [mm d-1], leaf area index [-].
-T = data_weather.loc[t_ini:t_end,'TG'].values      # [0.1 °C] Env. temperature
-I_glb = data_weather.loc[t_ini:t_end,'Q'].values  # [J cm-2 d-1] Global irr. 
-f_prc = data_weather.loc[t_ini:t_end,'RH'].values # [0.1 mm d-1] Precipitation
-f_prc[f_prc<0.0] = 0 # correct data that contains -0.1 for very low values
+T = data_weather.loc[t_ini:t_end, 'TG'].values  # [0.1 °C] Env. temperature
+I_glb = data_weather.loc[t_ini:t_end, 'Q'].values  # [J cm-2 d-1] Global irr.
+f_prc = data_weather.loc[t_ini:t_end, 'RH'].values  # [0.1 mm d-1] Precipitation
+f_prc[f_prc < 0.0] = 0  # correct data that contains -0.1 for very low values
 
-T = T/10                # [0.1 °C] to [°C] Environment temperature
-I_glb = I_glb*1E4/dt_wtr    # [J cm-2 d-1] to [J m-2 d-1] Global irradiance
-f_prc = f_prc/10/dt_wtr     # [0.1 mm d-1] to [mm d-1] Precipitation
+T = T / 10  # [0.1 °C] to [°C] Environment temperature
+I_glb = I_glb * 1E4 / dt_wtr  # [J cm-2 d-1] to [J m-2 d-1] Global irradiance
+f_prc = f_prc / 10 / dt_wtr  # [0.1 mm d-1] to [mm d-1] Precipitation
 
-d_wtr = {'I_glb' : np.array([t_weather, I_glb]).T, 
-    'T' : np.array([t_weather, T]).T,
-    'f_prc': np.array([t_weather, f_prc]).T,
-     }
+d_wtr = {'I_glb': np.array([t_weather, I_glb]).T,
+         'T': np.array([t_weather, T]).T,
+         'f_prc': np.array([t_weather, f_prc]).T,
+         }
 
 # Initialize module
 water = Water(tsim, dt_wtr, x0_wtr, p_wtr)
 
 # ---- Run simulation
 # Initial disturbance
-d_grs['WAI'] = np.array([[0,1,2,3,4], [1.,]*5]).T
+d_grs['WAI'] = np.array([[0, 1, 2, 3, 4], [1., ] * 5]).T
 
 # Iterator
 # (stop at second-to-last element, and store index in Fortran order)
@@ -144,11 +146,15 @@ for ti in it:
     # Index for current time instant
     idx = it.index
     # Integration span
-    tspan = (tsim[idx], tsim[idx+1])
+    tspan = (tsim[idx], tsim[idx + 1])
     print('Integrating', tspan)
     # Controlled inputs
-    u_grs = {'f_Gr':0, 'f_Hr':0}   # [kgDM m-2 d-1]
-    u_wtr = {'f_Irg':0}            # [mm d-1]
+    u_grs = {'f_Gr': 0,  # 0.3 * 15 * 1e-4 * 0.4
+             'f_Hr': 0}
+    # f_Gr [kgDM m-2 d-1]  Graze dry matter,
+    # 3 cows per one ha,value from farmer's knowledge, 15 [kgDM d-1] from Mohtar et al. 1997
+    # Harvest dry matter
+    u_wtr = {'f_Irg': 0}  # [mm d-1] Irrigation
     # Run grass model
     y_grs = grass.run(tspan, d_grs, u_grs)
     # Retrieve grass model outputs for water model
@@ -160,7 +166,7 @@ for ti in it:
 
 # Retrieve simulation results
 t_grs, t_wtr = grass.t, water.t
-WsDM, WgDM, LAI = grass.y['Ws']/0.4, grass.y['Wg']/0.4, grass.y['LAI']
+WsDM, WgDM, LAI = grass.y['Ws'] / 0.4, grass.y['Wg'] / 0.4, grass.y['LAI']
 L1, L2, L3 = water.y['L1'], water.y['L2'], water.y['L3'],
 WAI = water.y['WAI']
 
@@ -169,12 +175,12 @@ plt.figure(1)
 plt.plot(t_grs, WsDM, label='WsDM')
 plt.plot(t_grs, WgDM, label='WgDM')
 plt.plot(t_data, m_data,
-          linestyle='None', marker='o', label='WgDM data')
+         linestyle='None', marker='o', label='WgDM data')
 plt.legend()
 plt.xlabel(r'$time\ [d]$')
 plt.ylabel(r'$grass\ biomass\ [kgDM\ m^{-2}]$')
 
-fig2, (ax2a, ax2b) = plt.subplots(2,1, sharex=True)
+fig2, (ax2a, ax2b) = plt.subplots(2, 1, sharex=True)
 ax2a.plot(t_grs, grass.f['f_P'], label=r'$f_{P}$')
 ax2a.plot(t_grs, -grass.f['f_SR'], label=r'$f_{SR}$')
 ax2a.plot(t_grs, -grass.f['f_G'], label=r'$f_{G}$')
@@ -195,26 +201,26 @@ plt.figure(3)
 plt.plot(t_wtr, L1, label='L1', color='g')
 plt.plot(t_wtr, L2, label='L2', color='b')
 plt.plot(t_wtr, L3, label='L3', color='m')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc1']*p_wtr['D1']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc1'] * p_wtr['D1']),
          linestyle='--', label=r'$fc_{1}$', color='g')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc2']*p_wtr['D2']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc2'] * p_wtr['D2']),
          linestyle='--', label=r'$fc_{2}$', color='b')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc3']*p_wtr['D3']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc3'] * p_wtr['D3']),
          linestyle='--', label=r'$fc_{3}$', color='m')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp1']*p_wtr['D1']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp1'] * p_wtr['D1']),
          linestyle='-.', label=r'$pwp_{1}$', color='g')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp2']*p_wtr['D2']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp2'] * p_wtr['D2']),
          linestyle='-.', label=r'$pwp_{2}$', color='b')
-plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp3']*p_wtr['D3']),
+plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_pwp3'] * p_wtr['D3']),
          linestyle='-.', label=r'$pwp_{3}$', color='m')
 plt.legend()
 plt.xlabel('time ' + r'$[d]$')
 plt.ylabel('soil water ' + r'$[mm]$')
 
 plt.figure(4)
-plt.plot(t_wtr, L1/p_wtr['D1'], label=r'$\theta_{1}$', color='g')
-plt.plot(t_wtr, L2/p_wtr['D2'], label=r'$\theta_{2}$', color='b')
-plt.plot(t_wtr, L3/p_wtr['D3'], label=r'$\theta_{3}$', color='m')
+plt.plot(t_wtr, L1 / p_wtr['D1'], label=r'$\theta_{1}$', color='g')
+plt.plot(t_wtr, L2 / p_wtr['D2'], label=r'$\theta_{2}$', color='b')
+plt.plot(t_wtr, L3 / p_wtr['D3'], label=r'$\theta_{3}$', color='m')
 plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc1']),
          linestyle='--', label=r'$fc_{1}$', color='g')
 plt.plot(t_wtr, np.full((t_wtr.size,), p_wtr['theta_fc2']),
@@ -231,7 +237,7 @@ plt.legend()
 plt.xlabel('time ' + r'$[d]$')
 plt.ylabel('vol. fraction ' + r'$[-]$')
 
-fig5, (ax5a, ax5b, ax5c) = plt.subplots(3,1, sharex=True)
+fig5, (ax5a, ax5b, ax5c) = plt.subplots(3, 1, sharex=True)
 ax5a.plot(t_wtr, water.f['f_Pe'], label=r'$f_{Pe}$')
 ax5a.plot(t_wtr, -water.f['f_Ev'], label=r'$f_{Ev}$')
 ax5a.plot(t_wtr, water.f['f_Irg'], label=r'$f_{Irg}$')
@@ -250,7 +256,7 @@ ax5c.plot(t_wtr, -water.f['f_Dr3'], label=r'$f_{Dr3}$')
 ax5c.legend()
 ax5c.set_ylabel('flow rate ' + r'$[mm\ d^{-1}]$')
 ax5c.set_xlabel('time ' + r'$[d]$')
-
+plt.show()
 # References
 # Groot, J.C.J., and Lantinga, E.A., (2004). An object oriented model
 #   of the morphological development and digestability of perennial
