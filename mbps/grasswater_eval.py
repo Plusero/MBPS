@@ -23,8 +23,8 @@ tsim = np.linspace(0, 365, int(365 / 5) + 1)  # [d]
 # Weather data (disturbances shared across models)
 # t_ini = '19950101'
 # t_end = '19960101'
-t_ini = '20180101'
-t_end = '20190101'
+t_ini = '19980101'
+t_end = '19990101'
 t_weather = np.linspace(0, 365, 365 + 1)
 data_weather = pd.read_csv(
     '../data/etmgeg_260.csv',  # .. to move up one directory from current directory

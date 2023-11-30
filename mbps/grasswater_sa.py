@@ -39,7 +39,7 @@ dt_grs = 1  # [d]
 
 # Initial conditions
 # TODO: Specify suitable initial conditions for the grass sub-model
-x0_grs = {'Ws': 1, 'Wg': 0.02}  # [kgC m-2]
+x0_grs = {'Ws': 0.5, 'Wg': 0.5}  # [kgC m-2]
 
 # Model parameters (as provided by Mohtar et al. 1997 p.1492-1493)
 p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area
@@ -62,7 +62,7 @@ p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area
 # Satrt by using the modifications from Case 1.
 # If needed, adjust further those or additional parameters
 # p_grs['a'] = ???
-p_grs['alpa'] = 2E-9 * 10
+p_grs['alpha'] = 2E-9 * 10
 # p_grs['P0'] = ???
 # p_grs['Tmin'] = ???
 # p_grs['Topt'] = ???
@@ -228,35 +228,35 @@ for k in p_wtr.keys():
     j += 1
 
 # Sum-normalized sensitivities
-# NS_grs_min_sum = np.sum(np.abs(NS_grs_min), axis=1).reshape((grass.t.size, 1))
-# print(NS_grs_min_sum)
-# SNS_grs_min = np.abs(NS_grs_min) / NS_grs_min_sum
-# NS_grs_pls_sum = np.sum(np.abs(NS_grs_pls), axis=1).reshape((grass.t.size, 1))
-# SNS_grs_pls = np.abs(NS_grs_pls) / NS_grs_pls_sum
-#
-# NS_wtr_min_sum = np.sum(np.abs(NS_wtr_min), axis=1).reshape((grass.t.size, 1))
-# SNS_wtr_min = np.abs(NS_wtr_min) / NS_wtr_min_sum
-# NS_wtr_pls_sum = np.sum(np.abs(NS_wtr_pls), axis=1).reshape((grass.t.size, 1))
-# SNS_wtr_pls = np.abs(NS_wtr_pls) / NS_wtr_pls_sum
-# Sum-normalized sensitivities
+# at the beginning of the year, the sum of sensitivities is basically zero due to no growth
+print("NS_grs_min", NS_grs_min)
+print("NS_grs_min shape", NS_grs_min.shape)
 NS_grs_min_sum = np.sum(np.abs(NS_grs_min), axis=1).reshape((grass.t.size, 1))
-# print(NS_grs_min_sum)
-NS_grs_min_sum[0] = 1
-# NS_grs_min_sum = np.delete(NS_grs_min_sum, [0])
+print("NS_grs_min_sum shape", NS_grs_min_sum.shape)
+NS_grs_min_sum = np.where(NS_grs_min_sum != 0, NS_grs_min_sum, np.finfo(float).eps ** 2)
 SNS_grs_min = np.abs(NS_grs_min) / NS_grs_min_sum
 
 NS_grs_pls_sum = np.sum(np.abs(NS_grs_pls), axis=1).reshape((grass.t.size, 1))
-NS_grs_pls_sum[0] = 1
+NS_grs_pls_sum = np.where(NS_grs_pls_sum != 0, NS_grs_pls_sum, np.finfo(float).eps ** 2)
 SNS_grs_pls = np.abs(NS_grs_pls) / NS_grs_pls_sum
 
 NS_wtr_min_sum = np.sum(np.abs(NS_wtr_min), axis=1).reshape((grass.t.size, 1))
-print(NS_wtr_min_sum)
-NS_wtr_min_sum[0] = 1
+NS_wtr_min_sum = np.where(NS_wtr_min_sum != 0, NS_wtr_min_sum, np.finfo(float).eps ** 2)
 SNS_wtr_min = np.abs(NS_wtr_min) / NS_wtr_min_sum
 
 NS_wtr_pls_sum = np.sum(np.abs(NS_wtr_pls), axis=1).reshape((grass.t.size, 1))
-NS_wtr_pls_sum[0] = 1
+NS_wtr_pls_sum = np.where(NS_wtr_pls_sum != 0, NS_wtr_pls_sum, np.finfo(float).eps ** 2)
 SNS_wtr_pls = np.abs(NS_wtr_pls) / NS_wtr_pls_sum
+
+# Average normalized sensitivities
+ANS_grs_min_sum = np.mean(SNS_grs_min, axis=0)
+ANS_grs_pls_sum = np.mean(SNS_grs_pls, axis=0)
+ANS_wtr_min_sum = np.mean(SNS_wtr_min, axis=0)
+ANS_wtr_pls_sum = np.mean(SNS_wtr_pls, axis=0)
+print("ANS_grs_min_sum", ANS_grs_min_sum)
+print("ANS_grs_pls_sum", ANS_grs_pls_sum)
+print("ANS_wtr_min_sum", ANS_wtr_min_sum)
+print("ANS_wtr_pls_sum", ANS_wtr_pls_sum)
 
 # %% Figures SA grass
 # Retrieve simulation results
@@ -265,7 +265,7 @@ t_wtr = water.t
 
 # Plots
 cmap = colormaps.get_cmap('tab10')
-
+# pls here means plus change of parameter, min means minus change of parameter
 fig1, ((ax1a, ax1b), (ax1c, ax1d)) = plt.subplots(2, 2, sharex=True, sharey=True)
 ax1a.plot(t_grs, SNS_grs_pls[:, 0], label=r'$a+$', color=cmap(0))
 ax1a.plot(t_grs, SNS_grs_min[:, 0], label=r'$a-$', linestyle='--', color=cmap(0))
@@ -370,6 +370,57 @@ ax2f.plot(t_wtr, SNS_wtr_min[:, 18], label=r'$S-$', linestyle='--', color=cmap(0
 ax2f.legend()
 ax2f.set_xlabel('time' + r'$[d]$')
 
+plt.figure(3)
+plt.plot(t_grs, NS_grs_min[:, 1], label=r'$\alpha+$', color=cmap(0))
+plt.plot(t_grs, NS_grs_min[:, 1], label=r'$\alpha-$', linestyle='--', color=cmap(0))
+plt.plot(t_grs, NS_grs_min[:, 2], label=r'$\beta+$', color=cmap(0.25))
+plt.plot(t_grs, NS_grs_min[:, 2], label=r'$\beta-$', linestyle='--', color=cmap(0.25))
+plt.plot(t_grs, NS_grs_min[:, 8], label=r'$\phi+$', color=cmap(0.50))
+plt.plot(t_grs, NS_grs_min[:, 8], label=r'$\phi-$', linestyle='--', color=cmap(0.50))
+plt.plot(t_grs, NS_grs_min[:, 9], label=r'$Tmin+$', color=cmap(0.75))
+plt.plot(t_grs, NS_grs_min[:, 9], label=r'$Tmin-$', linestyle='--', color=cmap(0.75))
+plt.plot(t_grs, NS_grs_min[:, 12], label=r'$Y+$', color=cmap(1))
+plt.plot(t_grs, NS_grs_min[:, 12], label=r'$Y-$', linestyle='--', color=cmap(1))
+plt.legend()
+plt.ylabel(r'$Normalized\ Sensitivity\ [-]$')
+plt.xlabel('time' + r'$[d]$')
+
+plt.figure(4)
+# plt.plot(t_grs, SNS_grs_pls[:, 1], label=r'$\alpha+$', color=cmap(0))
+# plt.plot(t_grs, SNS_grs_min[:, 1], label=r'$\alpha-$', linestyle='--', color=cmap(0))
+# plt.plot(t_grs, SNS_grs_pls[:, 2], label=r'$\beta+$', color=cmap(0.25))
+# plt.plot(t_grs, SNS_grs_min[:, 2], label=r'$\beta-$', linestyle='--', color=cmap(0.25))
+# plt.plot(t_grs, SNS_grs_pls[:, 8], label=r'$\phi+$', color=cmap(0.50))
+# plt.plot(t_grs, SNS_grs_min[:, 8], label=r'$\phi-$', linestyle='--', color=cmap(0.50))
+# plt.plot(t_grs, SNS_grs_pls[:, 9], label=r'$Tmin+$', color=cmap(0.75))
+# plt.plot(t_grs, SNS_grs_min[:, 9], label=r'$Tmin-$', linestyle='--', color=cmap(0.75))
+# plt.plot(t_grs, SNS_grs_pls[:, 12], label=r'$Y+$', color=cmap(1))
+# plt.plot(t_grs, SNS_grs_min[:, 12], label=r'$Y-$', linestyle='--', color=cmap(1))
+plt.plot(t_grs, SNS_grs_pls[:, 1] + SNS_grs_min[:, 1], label=r'$\alpha$', color=cmap(0))
+plt.plot(t_grs, SNS_grs_pls[:, 2] + SNS_grs_min[:, 2], label=r'$\beta$', color=cmap(0.25))
+plt.plot(t_grs, SNS_grs_pls[:, 8] + SNS_grs_min[:, 8], label=r'$\phi$', color=cmap(0.5))
+plt.plot(t_grs, SNS_grs_pls[:, 12] + SNS_grs_min[:, 12], label=r'$Y$', color=cmap(0.75))
+plt.legend()
+plt.ylabel(r'$Sum\ Normalized\ Sensitivity\ [-]$')
+plt.xlabel('time' + r'$[d]$')
+
+plt.figure(5)
+# plt.plot(t_wtr, SNS_wtr_pls[:, 0], label=r'$\alpha+$', color=cmap(0))
+# plt.plot(t_wtr, SNS_wtr_min[:, 0], label=r'$\alpha-$', linestyle='--', color=cmap(0))
+# plt.plot(t_wtr, SNS_wtr_pls[:, 3], label=r'$k_{crop}+$', color=cmap(0.25))
+# plt.plot(t_wtr, SNS_wtr_min[:, 3], label=r'$k_{crop}-$', linestyle='--', color=cmap(0.25))
+# plt.plot(t_wtr, SNS_wtr_pls[:, 7], label=r'$WAIc+$', color=cmap(0.50))
+# plt.plot(t_wtr, SNS_wtr_min[:, 7], label=r'$WAIc-$', linestyle='--', color=cmap(0.50))
+# plt.plot(t_wtr, SNS_wtr_pls[:, 13], label=r'$D3+$', color=cmap(0.75))
+# plt.plot(t_wtr, SNS_wtr_min[:, 13], label=r'$D3-$', linestyle='--', color=cmap(0.75))
+plt.plot(t_wtr, SNS_wtr_pls[:, 0] + SNS_wtr_min[:, 0], label=r'$\alpha$', color=cmap(0))
+plt.plot(t_wtr, SNS_wtr_pls[:, 3] + SNS_wtr_min[:, 3], label=r'$k_{crop}$', color=cmap(0.25))
+plt.plot(t_wtr, SNS_wtr_pls[:, 7] + SNS_wtr_min[:, 7], label=r'$WAIc$', color=cmap(0.50))
+plt.plot(t_wtr, SNS_wtr_pls[:, 13] + SNS_wtr_min[:, 13], label=r'$D3$', color=cmap(0.75))
+plt.legend()
+plt.ylabel(r'$Sum\ Normalized\ Sensitivity\ [-]$')
+plt.xlabel('time' + r'$[d]$')
+plt.show()
 # References
 # Groot, J.C.J., and Lantinga, E.A., (2004). An object oriented model
 #   of the morphological development and digestability of perennial
