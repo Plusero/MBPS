@@ -19,7 +19,7 @@ plt.style.use('ggplot')
 # TODO: define numpy arrays with measured grass data in the Netherlands
 t_grass_data = np.array([107, 114, 122, 129, 136, 142, 149, 156])
 m_grass_data = np.array([156., 198., 333., 414., 510., 640., 663., 774.])
-m_grass_data = m_grass_data / 1E3  # [gDM m-2]
+m_grass_data = m_grass_data / 1E3  # from [gDM m-2] [kgDM m-2]
 # Simulation time
 tsim = np.linspace(0.0, 365.0, 365 + 1)  # [d]
 dt = 1  # [d]
@@ -100,5 +100,16 @@ plt.plot(t_grass_data, m_grass_data, label='measurement data')
 plt.plot(t_grass, WsDM, label='WsDM')
 plt.plot(t_grass, WgDM, label='WgDM')
 plt.plot(t_grass, W, label='W')
+
 plt.legend()
+plt.figure(2)
+plt.plot(t_grass, T, label='T')
+plt.xlabel('time' + r'$[d]$')
+plt.ylabel('temperature' + r'$^\circ C$' + r'$[-]$')
+# plt.legend()
+plt.figure(3)
+plt.plot(t_grass_data, m_grass_data, "--o")
+plt.xlim([0, 365])
+plt.xlabel('time' + r'$[d]$')
+plt.ylabel('grass biomass' + r'$[kg\cdot m^{-2}]$')
 plt.show()

@@ -86,6 +86,8 @@ mean_NS_sorted = mean_NS.sort_values(ascending=False)
 
 # -- Plots
 # TODO: Make the necessary plots (example provided below)
+
+
 plt.figure(1)
 f, [ax1, ax2, ax3, ax4, ax5, ax6, ax7] = plt.subplots(1, 7, sharey='row')  # sharey='row'
 ax1.plot(grass.t, ns['Wg', 'phi', '-'], label='phi -', linestyle='--')
