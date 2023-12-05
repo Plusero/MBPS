@@ -37,7 +37,7 @@ dt_grs = 1  # [d]x
 
 # Initial conditions
 # TODO: Specify suitable initial conditions for the grass sub-model
-x0_grs = {'Ws': 0.01, 'Wg': 0.02}  # [kgC m-2] according to the Mohtar et al. 1997
+x0_grs = {'Ws': 0, 'Wg': 0.02}  # [kgC m-2] according to the Mohtar et al. 1997
 # note that the Unit here is KgC m-2, meaning the weight of carbon content
 # Model parameters (as provided by Mohtar et al. 1997 p.1492-1493)
 p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area. smaller a, later growth
@@ -145,52 +145,40 @@ def fnc_y(p0):
     # Model parameters
     # TODO: specify x relevant parameters to estimate.
     # (these may not necessarily be the ones that you adjusted manually before)
-    grass.p['alpha'] = p0[0]
+    grass.p['alpha'] = p0[1]
     # water.p['WAIc'] = p0[1]
     # grass.p['phi'] = p0[0]
     # grass.p['Y'] = p0[3]
-    grass.p['beta'] = p0[1]
+    grass.p['beta'] = p0[0]
     water.p['kcrop'] = p0[2]
-    # Run simulation
-    grass.x0 = x0_grs.copy()
-    water.x0 = x0_wtr.copy()
-    # Initial disturbance
-    d_grs['WAI'] = np.array([[0, 1, 2, 3, 4], [1., ] * 5]).T
-    # Iterator
-    # (stop at second-to-last element, and store index in Fortran order)
-    it = np.nditer(tsim[:-1], flags=['f_index'])
-    for ti in it:
-        # Index for current time instant
-        idx = it.index
-        # Integration span
-        tspan = (tsim[idx], tsim[idx + 1])
-        # Controlled inputs
-        u_grs = {'f_Gr': 0, 'f_Hr': 0}  # [kgDM m-2 d-1]
-        u_wtr = {'f_Irg': 0}  # [mm d-1]
-        # Run grass model
-        y_grs = grass.run(tspan, d_grs, u_grs)
-        # Retrieve grass model outputs for water model
-        d_wtr['LAI'] = np.array([y_grs['t'], y_grs['LAI']])
-        # Run water model
-        y_wtr = water.run(tspan, d_wtr, u_wtr)
-        # Retrieve water model outputs for grass model
-        d_grs['WAI'] = np.array([y_wtr['t'], y_wtr['WAI']])
 
-    return grass.y['Wg'] / 0.4
+    # Controlled inputs
+    u_grs = {'f_Gr': 0,  # 0.3 * 15 * 1e-4 * 0.4
+             'f_Hr': 0}
+    u_wtr = {'f_Irg': 0}  # [mm d-1] Irrigation
+    # Run simulation
+    tspan = (tsim[0], tsim[-1])
+    y_grs = grass.run(tspan, d_grs, u_grs)
+    d_wtr['LAI'] = np.array([y_grs['t'], y_grs['LAI']])
+    y_wtr = water.run(tspan, d_wtr, u_wtr)
+    d_grs['WAI'] = np.array([y_wtr['t'], y_wtr['WAI']])
+    # Return result of interest (WgDM [kgDM m-2])
+    # assuming 0.4 kgC/kgDM (Mohtar et al. 1997, p. 1492)
+    return y_grs['Wg'] / 0.4
 
 
 # Run calibration function
 # TODO: Specify the initial guess for the parameter values
 # These can be the reference values provided by Mohtar et al. (1997),
 # You can simply call them from the dictionary p.
-p0 = np.array([p_grs['alpha'], p_grs['beta'], p_wtr['kcrop']])  # Initial guess
+p0 = np.array([p_grs['beta'], p_grs['alpha'], p_wtr['kcrop']])  # Initial guess
 # p0 = np.array([p_grs['phi'], p_grs['alpha'], p_wtr['kcrop'], p_grs['Y']])  # Initial guess
 # Parameter bounds
 # TODO: Specify bounds for your parameters, e.g., efficiencies lie between (0,1).
 # Use a tuple of tuples for min and max values:
 # ((p1_min, p2_min, p3_min), (p1_max, p2_max, p3_max))
 # bnds = ((0.5, 1E-9, 0.01, 0.2), (1, 1E-8, 0.1, 1))
-bnds = ((1.9E-9 * 10, 1E-9, 1E-9), (2.1E-9 * 10, 1, 1))
+bnds = ((1E-9, 1.5E-9 * 10, 1E-9), (1, 2.5E-9 * 10, 1))
 # Call the lest_squares function.
 # Our own residuals function takes the necessary positional argument p0,
 # and the additional arguments fcn_y, t ,tdata, ydata.
