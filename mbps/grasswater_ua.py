@@ -1,17 +1,30 @@
-from scipy.optimize import least_squares
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from mbps.models.water_sol import Water
 from mbps.models.grass_sol import Grass
-from mbps.functions.calibration import fcn_residuals, fcn_accuracy
+from mbps.models.water_sol import Water
 
 plt.style.use('ggplot')
 
-#### -- Data --
-# Simulation time
-tsim = np.linspace(0, 365, 365 + 1)  # [d]
+# Random number generator. A seed is specified to allow for reproducibility.
+rng = np.random.default_rng(seed=123321)
+
+# data real world
+verification_date = [114,
+                     129,
+                     140,
+                     149,
+                     163]
+verification = [40.3932797998184,
+                135.05780009766931,
+                259.5707117634952,
+                552.0907317416204,
+                691.1513254337085]
+
+# simulation time array
+tsim = np.linspace(0, 365, int(365 / 5) + 1)  # [d]
+tspan = (tsim[0], tsim[-1])
 
 # Weather data (disturbances)
 t_ini = '19950101'
@@ -25,21 +38,9 @@ data_weather = pd.read_csv(
     index_col=0,  # column with row names from used columns, 0-indexed
 )
 
-# Grass data. (Organic matter assumed equal to DM) [gDM m-2]
-# (Groot and Lantinga, 2004)
-t_data = np.array([107, 114, 122, 129, 136, 142, 149, 156])
-m_data = np.array([156., 198., 333., 414., 510., 640., 663., 774.])
-m_data = m_data / 1E3
-
-# ---- Grass sub-model
-# Step size
+# ---- Grass model
 dt_grs = 1  # [d]x
-
-# Initial conditions
-# TODO: Specify suitable initial conditions for the grass sub-model
-x0_grs = {'Ws': 0, 'Wg': 0.02}  # [kgC m-2] according to the Mohtar et al. 1997
-# note that the Unit here is KgC m-2, meaning the weight of carbon content
-# Model parameters (as provided by Mohtar et al. 1997 p.1492-1493)
+x0_grs = {'Ws': 0, 'Wg': 0.02}
 p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area. smaller a, later growth
          'alpha': 2E-9,  # [kgCO2 J-1] leaf photosynthetic efficiency
          'beta': 0.05,  # [d-1] senescence rate
@@ -55,20 +56,8 @@ p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area. smaller a, late
          'Y': 0.75,  # [-] structure fraction from storage
          'z': 1.33  # [-] bell function power
          }
-# Model parameters adjusted manually to obtain growth
-# TODO: Adjust a few parameters to obtain growth.
-# Start by using the modifications from Case 1.
-# If needed, adjust further those or additional parameters
-# p_grs['alpha'] = 1.29E-8
-# p_grs['a'] = 36
-# p_grs['alpha'] = 1.5E-9 * 10
-# p_grs['phi'] = 0.8
-# gives very good result
 p_grs['a'] = 40
 p_grs['alpha'] = 2.0E-9 * 10
-
-# Disturbances
-# PAR [J m-2 d-1], environment temperature [°C], leaf area index [-]
 T = data_weather.loc[t_ini:t_end, 'TG'].values  # [0.1 °C] Env. temperature
 I_gl = data_weather.loc[t_ini:t_end, 'Q'].values  # [J cm-2 d-1] Global irr.
 
@@ -79,18 +68,12 @@ d_grs = {'T': np.array([t_weather, T]).T,
          'I0': np.array([t_weather, I0]).T,
          }
 
-# Initialize module
+# Initialize grass module
 grass = Grass(tsim, dt_grs, x0_grs, p_grs)
 
 # ---- Water sub-model
 dt_wtr = 1  # [d]
-
-# Initial conditions
-# TODO: Specify suitable initial conditions for the soil water sub-model
-x0_wtr = {'L1': 40, 'L2': 60, 'L3': 100, 'DSD': 2}  # 3*[mm], [d]
-# using the values from the Castellaro et al. 2009
-
-# Castellaro et al. 2009, and assumed values for soil types and layers
+x0_wtr = {'L1': 40, 'L2': 60, 'L3': 100, 'DSD': 2}
 p_wtr = {'S': 10,  # [mm d-1] parameter of precipitation retention
          'alpha': 1.29E-6,  # [mm J-1] Priestley-Taylor parameter
          'gamma': 0.68,  # [mbar °C-1] Psychrometric constant
@@ -129,28 +112,25 @@ d_wtr = {'I_glb': np.array([t_weather, I_glb]).T,
          'f_prc': np.array([t_weather, f_prc]).T,
          }
 
-# Initialize module
+# Initialize water module
 water = Water(tsim, dt_wtr, x0_wtr, p_wtr)
 
-# ---- Run simulation
 # Initial disturbance
 d_grs['WAI'] = np.array([[0, 1, 2, 3, 4], [1., ] * 5]).T
 
+# ---- Uncertainty Analysis
 
-# adapt the function fnc_y from grass calibration to grasswater calibration
-def fnc_y(p0):
+n_sim = 1000  # number of simulations
+# Initialize array of outputs, shape (len(tsim), len(n_sim))
+m_arr = np.full((tsim.size, n_sim), np.nan)
+
+for j in range(n_sim):
     # Reset initial conditions
     grass.x0 = x0_grs.copy()
-    water.x0 = x0_wtr.copy()
-    grass.p['alpha'] = p0[0]
-    # water.p['WAIc'] = p0[1]
-    # grass.p['phi'] = p0[0]
-    # grass.p['Y'] = p0[3]
-    grass.p['beta'] = p0[1]
-    water.p['kcrop'] = p0[2]
-    # Run simulation
-
-    # Initial disturbance
+    # Sample random parameters
+    grass.p['alpha'] = rng.normal(p_hat_arr[0], y_calib_acc['sd'][0])
+    grass.p['a'] = rng.normal(p_hat_arr[1], y_calib_acc['sd'][1])
+    # Model output
     d_grs['WAI'] = np.array([[0, 1, 2, 3, 4], [1., ] * 5]).T
     # Iterator
     # (stop at second-to-last element, and store index in Fortran order)
@@ -171,46 +151,12 @@ def fnc_y(p0):
         y_wtr = water.run(tspan, d_wtr, u_wtr)
         # Retrieve water model outputs for grass model
         d_grs['WAI'] = np.array([y_wtr['t'], y_wtr['WAI']])
+    # Retrieve results and store in array of outputs
+    m_arr[:, j] = y_j['m']
 
-    return grass.y['Wg'] / 0.4
-
-
-# Run calibration function
-# TODO: Specify the initial guess for the parameter values
-# These can be the reference values provided by Mohtar et al. (1997),
-# You can simply call them from the dictionary p.
-p0 = np.array([p_grs['alpha'], p_grs['beta'], p_wtr['kcrop']])  # Initial guess
-# p0 = np.array([p_grs['phi'], p_grs['alpha'], p_wtr['kcrop'], p_grs['Y']])  # Initial guess
-# Parameter bounds
-# TODO: Specify bounds for your parameters, e.g., efficiencies lie between (0,1).
-# Use a tuple of tuples for min and max values:
-# ((p1_min, p2_min, p3_min), (p1_max, p2_max, p3_max))
-# bnds = ((0.5, 1E-9, 0.01, 0.2), (1, 1E-8, 0.1, 1))
-bnds = ((1.8E-9 * 10, 0.02, 0.85), (2.5E-9 * 10, 0.1, 1))
-# Call the lest_squares function.
-# Our own residuals function takes the necessary positional argument p0,
-# and the additional arguments fcn_y, t ,tdata, ydata.
-y_ls = least_squares(fcn_residuals, p0, bounds=bnds,
-                     args=(fnc_y, grass.t, t_data, m_data), ftol=1E-12,
-                     kwargs={'plot_progress': True})
-# max_nfev=100000,
-# Calibration accuracy
-y_calib_acc = fcn_accuracy(y_ls)
-# Run calibrated simulation
-# TODO: Retrieve the parameter estimates from
-# the output of the least_squares function
-p_hat = y_ls['x']
-# TODO: Run the model output simulation function with the estimated parameters
-# (this is the calibrated model output)
-WgDM_hat = fnc_y(p_hat)
-
-#### -- Plot results --
-# TODO: Make one figure comparing the calibrated model against
-# the measured data
 plt.figure(1)
-plt.plot(tsim, WgDM_hat, label='m_hat')
-plt.plot(t_data, m_data, label='m_data', marker="o", linestyle='None')
-plt.xlabel('Time [d]')
-plt.ylabel('grass biomass' + r'$[kg\cdot m^{-2}]$')
-plt.legend()
+ax2 = plt.gca()
+ax2 = fcn_plot_uncertainty(ax2, tsim, m_arr, ci=[0.5, 0.68, 0.95])
+plt.xlabel(r'$time\ [d]$')
+plt.ylabel('cummulative mass ' + r'$[kgDM\ m^{-2}]$')
 plt.show()

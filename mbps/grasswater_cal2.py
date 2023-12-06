@@ -64,7 +64,7 @@ p_grs = {'a': 40.0,  # [m2 kgC-1] structural specific leaf area. smaller a, late
 # p_grs['alpha'] = 1.5E-9 * 10
 # p_grs['phi'] = 0.8
 # gives very good result
-p_grs['a'] = 40
+# p_grs['a'] = 40
 p_grs['alpha'] = 2.0E-9 * 10
 
 # Disturbances
@@ -146,7 +146,7 @@ def fnc_y(p0):
     # water.p['WAIc'] = p0[1]
     # grass.p['phi'] = p0[0]
     # grass.p['Y'] = p0[3]
-    grass.p['beta'] = p0[1]
+    grass.p['a'] = p0[1]
     water.p['kcrop'] = p0[2]
     # Run simulation
 
@@ -179,14 +179,14 @@ def fnc_y(p0):
 # TODO: Specify the initial guess for the parameter values
 # These can be the reference values provided by Mohtar et al. (1997),
 # You can simply call them from the dictionary p.
-p0 = np.array([p_grs['alpha'], p_grs['beta'], p_wtr['kcrop']])  # Initial guess
+p0 = np.array([p_grs['alpha'], p_grs['a'], p_wtr['kcrop']])  # Initial guess
 # p0 = np.array([p_grs['phi'], p_grs['alpha'], p_wtr['kcrop'], p_grs['Y']])  # Initial guess
 # Parameter bounds
 # TODO: Specify bounds for your parameters, e.g., efficiencies lie between (0,1).
 # Use a tuple of tuples for min and max values:
 # ((p1_min, p2_min, p3_min), (p1_max, p2_max, p3_max))
 # bnds = ((0.5, 1E-9, 0.01, 0.2), (1, 1E-8, 0.1, 1))
-bnds = ((1.8E-9 * 10, 0.02, 0.85), (2.5E-9 * 10, 0.1, 1))
+bnds = ((2E-9 * 10, 20, 0.85), (2.5E-9 * 10, 50, 1))
 # Call the lest_squares function.
 # Our own residuals function takes the necessary positional argument p0,
 # and the additional arguments fcn_y, t ,tdata, ydata.

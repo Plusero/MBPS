@@ -2,7 +2,8 @@
 """
 FTE34806 - Modelling of Biobased Production Systems
 MSc Biosystems Engineering, WUR
-@authors:   -- write your team names here --
+@authors:   Daniel Reyes Lastiri, Stefan Maranus,
+            Rachel van Ooteghem, Tim Hoogstad
 
 Tutorial for the uncertainty analysis of the logistic growth model.
 This tutorial covers first the calibration of the logistic growth model,
@@ -20,9 +21,9 @@ from mbps.functions.uncertainty import fcn_plot_uncertainty
 plt.style.use('ggplot')
 
 # Random number generator. A seed is specified to allow for reproducibility.
-rng = np.random.default_rng(seed=123321)
+rng = np.random.default_rng(seed=12)
 
-# -- Calibration --
+# ---- Calibration
 # Grass data, Wageningen 1984 (Bouman et al. 1996)
 # Cummulative yield [kgDM m-2]
 tdata = np.array([87, 121, 155, 189, 217, 246, 273, 304])
@@ -62,17 +63,12 @@ y_ls = least_squares(fcn_residuals, p0,
 
 # Calibration accuracy
 y_calib_acc = fcn_accuracy(y_ls)
-print("y_calib_acc", y_calib_acc)
+
 # Simulate model with initial and estimated parameters
 p_hat_arr = y_ls['x']
 m_hat = fcn_y(p_hat_arr)
-s_hat = y_calib_acc['cov']
-print("s_hat", s_hat)
-s_r = np.sqrt(s_hat[0][0])
-# s_r = 0
-s_k = np.sqrt(s_hat[1][1])
-# s_k = 0
-# Plot calibration results
+
+# Plot results
 plt.figure(1)
 plt.plot(lg.t, m_hat, label=r'$\hat{m}$')
 plt.plot(tdata, mdata, label=r'$m_{data}$', linestyle='None', marker='o')
@@ -80,44 +76,30 @@ plt.xlabel('time ' + r'$[d]$')
 plt.ylabel('cummulative mass ' + r'$[kgDM\ m^{-2}]$')
 plt.legend()
 
-# -- Uncertainty Analysis --
+# ---- Uncertainty Analysis
 # Monte Carlo simulations
 n_sim = 1000  # number of simulations
 # Initialize array of outputs, shape (len(tsim), len(n_sim))
 m_arr = np.full((tsim.size, n_sim), np.nan)
 # Run simulations
-rnorm = p_hat_arr[0]
-rdev = s_r
-knorm = p_hat_arr[1]
-kdev = s_k
-m0norm = x0['m']
-m0dev = 0.001
 for j in range(n_sim):
-    # TODO: Fill in the Monte Carlo simulations
+    # Reset initial conditions
+    lg.x0 = x0.copy()
     # Sample random parameters
-    r = rng.normal(rnorm, rdev)
-    K = rng.normal(knorm, kdev)
-    m0 = rng.normal(m0norm, m0dev)
-    m = (m0 * K) / (m0 + (K - m0) * np.exp(-r * tsim))
-    # Store current simulation 'j' in the corresponding array column.
-    m_arr[:, j] = m
+    lg.p['r'] = rng.normal(p_hat_arr[0], y_calib_acc['sd'][0])
+    lg.p['K'] = rng.normal(p_hat_arr[1], y_calib_acc['sd'][1])
+    # Model output
+    y_j = lg.run(tspan)
+    # Retrieve results and store in array of outputs
+    m_arr[:, j] = y_j['m']
 
-# Plot results
-# TODO: Plot the confidence intervals using 'fcn_plot_uncertainty'
 # Plot results
 plt.figure(2)
-# TODO: Make a plot for the first 12 simulations (the first 12 columns in y_arr)
-plt.plot(tsim, m_arr[:, 12])
-plt.xlabel(r'$time\ [d]$')
-plt.ylabel('biomass ' + r'$[kgDM\ m^{-2}]$')
-
-plt.figure(3)
 ax2 = plt.gca()
-ax2 = fcn_plot_uncertainty(ax2, tsim, m_arr, ci=[0.50, 0.68, 0.95])
+ax2 = fcn_plot_uncertainty(ax2, tsim, m_arr, ci=[0.5, 0.68, 0.95])
 plt.xlabel(r'$time\ [d]$')
-plt.ylabel('biomass ' + r'$[kgDM\ m^{-2}]$')
+plt.ylabel('cummulative mass ' + r'$[kgDM\ m^{-2}]$')
 plt.show()
-
 # References
 
 # Bouman, B.A.M., Schapendonk, A.H.C.M., Stol, W., van Kralingen, D.W.G.
