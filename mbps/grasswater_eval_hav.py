@@ -34,7 +34,7 @@ hth = np.linspace(0.1, 0.7, hav_op_step)
 # hth = np.linspace(0.3, 0.65, hav_op_step)
 for i in hamt:  # i, amt
     for j in hth:  # j,th
-        if(j-i>0.05):
+        if (j - i > 0.05):
             tsim = np.linspace(0, 365, int(365 / 5) + 1)  # [d]
             # Weather data (disturbances shared across models)
             # t_ini = '19950101'
