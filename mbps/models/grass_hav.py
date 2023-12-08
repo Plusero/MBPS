@@ -128,6 +128,7 @@ class Grass(Module):
         self.hav_amt = hav[0]
         self.hav_th = hav[1]
         self.hav_wg = hav[2]
+        self.hav_times = 0
         self.f_keys = ('f_P', 'f_SR', 'f_G', 'f_MR',
                        'f_R', 'f_S', 'f_Hr', 'f_Gr')
         for k in self.f_keys:
@@ -221,6 +222,7 @@ class Grass(Module):
         self.f['f_Gr'][idx] = f_Gr
         if (Wg / 0.4 > self.hav_th):  # when WgDM is bigger than0.5kgDM
             self.hav_wg += self.hav_amt
+            self.hav_times += 1
             return np.array([dWs_dt, dWg_dt - self.hav_amt * 0.4])
         return np.array([dWs_dt, dWg_dt])
 
