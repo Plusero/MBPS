@@ -224,7 +224,8 @@ for j in range(n_sim):
     # Sample random parameters
 
     grass.p['alpha'] = rng.normal(p_hat[0], y_calib_acc['sd'][0])
-    grass.p['a'] = rng.normal(p_hat[1], y_calib_acc['sd'][1])
+    # grass.p['a'] = rng.normal(p_hat[1], y_calib_acc['sd'][1])
+    # grass.p['a'] = rng.normal(p_hat[1], y_calib_acc['sd'][1])
     # Model output
     d_grs['WAI'] = np.array([[0, 1, 2, 3, 4], [1., ] * 5]).T
     it = np.nditer(tsim[:-1], flags=['f_index'])
@@ -252,4 +253,6 @@ ax2 = plt.gca()
 ax2 = fcn_plot_uncertainty(ax2, tsim, m_arr, ci=[0.5, 0.68, 0.95])
 plt.xlabel(r'$time\ [d]$')
 plt.ylabel('cummulative mass ' + r'$[kgDM\ m^{-2}]$')
+# plt.title('Uncertainty Propagation of parameter a')
+plt.title('Uncertainty Propagation of parameter'+r'$\ \alpha$')
 plt.show()
